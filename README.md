@@ -4,7 +4,7 @@ A CLI tool that sniffs out suspicious betting behavior on [Polymarket](https://p
 
 ## How it works
 
-poly_sniff pulls the top position holders for a market, retrieves their full transaction histories, and runs four behavioral metrics against each user. Users who pass *all four* thresholds simultaneously are flagged and printed to terminal.
+poly_sniff pulls the top position holders for a market, retrieves their full transaction histories within that market, and runs four behavioral metrics against each user. Users who pass *all four* thresholds simultaneously are flagged and printed to terminal.
 
 The core idea: an insider doesn't hedge, doesn't follow the crowd, and tends to act late. poly_sniff looks for exactly that — unidirectional conviction, contrarian pricing, capital concentration on one side, and disproportionate activity near resolution.
 
@@ -42,7 +42,6 @@ poly_sniff <market_slug> [options]
 | Argument | Description |
 |----------|-------------|
 | `market_slug` | Slug of the Polymarket market to analyze. Found after `/event/` in the market URL, e.g. `polymarket.com/event/will-x-happen-by-date` |
-|
 
 ### Options
 
