@@ -12,13 +12,35 @@ def _extract_slug_from_url(url: str) -> str | None:
     return match.group(1) if match else None
 
 
+def _to_search_query(claim: str, max_words: int = 8) -> str:
+    """Extract key terms from a claim for search engine queries."""
+    stop_words = {'the', 'a', 'an', 'is', 'are', 'was', 'were', 'will', 'be', 'been',
+                  'being', 'have', 'has', 'had', 'do', 'does', 'did', 'to', 'of', 'in',
+                  'for', 'on', 'with', 'at', 'by', 'from', 'that', 'this', 'it', 'and',
+                  'or', 'but', 'not', 'if', 'so', 'can', 'could', 'would', 'should',
+                  'their', 'they', 'its', 'his', 'her', 'our', 'your', 'who', 'what',
+                  'which', 'when', 'where', 'how', 'than', 'then', 'also', 'into',
+                  'about', 'after', 'before', 'between', 'under', 'over', 'through',
+                  'first', 'time', 'early', 'late', 'very', 'just', 'more', 'most',
+                  'some', 'any', 'each', 'every', 'showing', 'videos', 'close',
+                  'reported', 'officials', 'according', 'said', 'says', 'told'}
+    words = [w for w in re.sub(r'[^\w\s-]', '', claim).split()
+             if w.lower() not in stop_words and len(w) > 2]
+    return ' '.join(words[:max_words])
+
+
 def _search_via_searxng(query: str, limit: int = 10) -> list[dict]:
     """Search Polymarket via SearXNG for semantic matching."""
+    # Shorten long claims to key terms for better search results
+    search_q = _to_search_query(query) if len(query) > 60 else query
+    if not search_q.strip():
+        search_q = query[:60]
+
     try:
         resp = requests.get(
             f"{SEARXNG_URL}/search",
             params={
-                'q': f'{query} site:polymarket.com',
+                'q': f'{search_q} site:polymarket.com',
                 'format': 'json',
             },
             timeout=15,
@@ -134,6 +156,27 @@ def _search_via_gamma(query: str, limit: int = 10) -> list[dict]:
         return []
 
 
+def _build_query_variants(claims: list[str]) -> list[str]:
+    """Generate multiple short query variants from claims for broader search coverage."""
+    queries = []
+    seen = set()
+
+    for claim in claims[:5]:
+        # The full keyword-extracted version
+        kw = _to_search_query(claim, max_words=6)
+        if kw and kw.lower() not in seen:
+            seen.add(kw.lower())
+            queries.append(kw)
+
+        # A shorter 3-4 word version for broader matches
+        short = _to_search_query(claim, max_words=4)
+        if short and short.lower() not in seen:
+            seen.add(short.lower())
+            queries.append(short)
+
+    return queries[:8]
+
+
 def search_markets(claims: list[str], limit_per_query: int = 10) -> list[dict]:
     """Search Polymarket for markets matching the given claims.
 
@@ -142,15 +185,22 @@ def search_markets(claims: list[str], limit_per_query: int = 10) -> list[dict]:
     """
     seen_slugs = set()
     candidates = []
+    searxng_ok = False
 
-    # Primary: SearXNG semantic search
-    for claim in claims[:3]:
-        for c in _search_via_searxng(claim, limit=limit_per_query):
+    # Primary: SearXNG semantic search with multiple query variants
+    queries = _build_query_variants(claims)
+    for query in queries:
+        results = _search_via_searxng(query, limit=limit_per_query)
+        if results:
+            searxng_ok = True
+        for c in results:
             if c['slug'] not in seen_slugs:
                 seen_slugs.add(c['slug'])
                 candidates.append(c)
             if len(candidates) >= MAX_CANDIDATES:
                 break
+        if len(candidates) >= MAX_CANDIDATES:
+            break
 
     # Enrich SearXNG results with Gamma API data
     if candidates:
@@ -158,7 +208,7 @@ def search_markets(claims: list[str], limit_per_query: int = 10) -> list[dict]:
         candidates = _enrich_from_gamma(candidates)
 
     # Fallback: Gamma API direct search if SearXNG returned nothing
-    if not candidates:
+    if not searxng_ok:
         print(f"  searxng       : unavailable, using Gamma API fallback")
         for claim in claims[:3]:
             for c in _search_via_gamma(claim, limit=limit_per_query):

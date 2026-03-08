@@ -1,24 +1,60 @@
+import re
 import requests
 from .config import RESEARCHTOOLS_URL
 
 
+_STOP_WORDS = {'the', 'a', 'an', 'is', 'are', 'was', 'were', 'will', 'be', 'to', 'of',
+               'in', 'for', 'on', 'with', 'at', 'by', 'from', 'that', 'this', 'and',
+               'or', 'but', 'not', 'if', 'it', 'its', 'do', 'does', 'did', 'has', 'have',
+               'had', 'been', 'being', 'would', 'could', 'should', 'can', 'may', 'might',
+               'shall', 'as', 'so', 'than', 'what', 'who', 'how', 'when', 'where', 'which'}
+
+
+def _stem(word: str) -> str:
+    """Minimal suffix stripping for better fuzzy matching."""
+    w = word.lower()
+    for suffix in ('tion', 'sion', 'ment', 'ness', 'ious', 'ous', 'ing', 'ies',
+                   'ied', 'ian', 'ans', "'s", 'es', 'ed', 'ly', 's'):
+        if len(w) > len(suffix) + 3 and w.endswith(suffix):
+            return w[:-len(suffix)]
+    return w
+
+
+def _tokenize(text: str) -> set[str]:
+    """Tokenize text into stemmed, non-stop words."""
+    words = re.findall(r"[a-zA-Z']+", text.lower())
+    return {_stem(w) for w in words if w not in _STOP_WORDS and len(w) > 2}
+
+
 def _keyword_fallback(claim: str, candidates: list[dict]) -> list[dict]:
-    """Simple keyword matching fallback when LLM ranking is unavailable."""
-    claim_words = set(claim.lower().split())
-    claim_words -= {'the', 'a', 'an', 'is', 'are', 'will', 'be', 'to', 'of', 'in', 'for',
-                    'on', 'with', 'at', 'by', 'from', 'that', 'this', 'and', 'or', 'but'}
+    """Fuzzy keyword matching fallback when LLM ranking is unavailable."""
+    claim_tokens = _tokenize(claim)
 
     results = []
     for c in candidates:
-        text = f"{c.get('title', '')} {c.get('description', '')}".lower()
-        text_words = set(text.split())
-        overlap = len(claim_words & text_words)
-        score = min(100, int((overlap / max(len(claim_words), 1)) * 100))
+        text = f"{c.get('title', '')} {c.get('description', '')}"
+        cand_tokens = _tokenize(text)
+
+        # Exact stem overlap
+        overlap = len(claim_tokens & cand_tokens)
+
+        # Substring bonus: "iran" matches "iranian" after stemming
+        substring_bonus = 0
+        for ct in claim_tokens - cand_tokens:
+            for tt in cand_tokens:
+                if ct in tt or tt in ct:
+                    substring_bonus += 0.5
+                    break
+
+        effective = overlap + substring_bonus
+        score = min(100, int((effective / max(len(claim_tokens), 1)) * 100))
+
+        matched = claim_tokens & cand_tokens
         results.append({
             'slug': c['slug'],
             'title': c.get('title', ''),
             'relevance': score,
-            'reasoning': f"Keyword match: {overlap}/{len(claim_words)} terms",
+            'reasoning': f"Keyword: {overlap}+{substring_bonus:.0f}/{len(claim_tokens)} ({', '.join(list(matched)[:3])})",
         })
 
     results.sort(key=lambda x: x['relevance'], reverse=True)
