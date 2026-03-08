@@ -11,24 +11,32 @@ The core idea: an insider doesn't hedge, doesn't follow the crowd, and tends to 
 ## Installation
 
 ```bash
-# Install globally from GitHub
-pip install git+https://github.com/agile-enigma/poly_sniff.git
-
-# Or clone and install locally
+# Clone the repository
 git clone https://github.com/agile-enigma/poly_sniff.git
 cd poly_sniff
-pip install .
 
-# Or editable install for development
+# Create a virtual environment
+python3 -m venv .venv
+
+# Activate the virtual environment
+source .venv/bin/activate  # On macOS/Linux
+# .venv\Scripts\activate   # On Windows
+
+# Install in editable mode
 pip install -e .
 ```
 
-After installation, `poly_sniff` is available as a global command.
-
 ## Quick start
+
+Ensure your virtual environment is activated, then run:
 
 ```bash
 poly_sniff will-x-happen-by-date
+```
+
+If you don't want to activate the environment every time, you can use the direct path:
+```bash
+./.venv/bin/poly_sniff will-x-happen-by-date
 ```
 
 ## Usage
