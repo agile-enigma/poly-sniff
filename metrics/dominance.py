@@ -2,12 +2,12 @@ import pandas as pd
 
 
 def compute(transactions_df: pd.DataFrame) -> pd.DataFrame:
-    """Compute userDominantSideRatio and userDominantSide.
+    """Compute userDominantSideRatio_market and userDominantSide_market.
 
     Bullish volume = BUY Yes + SELL No (USDC).
     Bearish volume = BUY No + SELL Yes (USDC).
-    userDominantSideRatio = max(bullish, bearish) / total. Range 0.5–1.
-    userDominantSide = 'bullish' | 'bearish' | 'neutral'.
+    userDominantSideRatio_market = max(bullish, bearish) / total. Range 0.5–1.
+    userDominantSide_market = 'bullish' | 'bearish' | 'neutral'.
     """
     df = transactions_df.copy()
 
@@ -29,17 +29,19 @@ def compute(transactions_df: pd.DataFrame) -> pd.DataFrame:
     ).reset_index()
 
     total = user_vols['bullish_vol'] + user_vols['bearish_vol']
-    user_vols['userDominantSideRatio'] = (
+    user_vols['userDominantSideRatio_market'] = (
         user_vols[['bullish_vol', 'bearish_vol']].max(axis=1)
         / total.replace(0, float('nan'))
     ).fillna(0)
 
-    user_vols['userDominantSide'] = user_vols.apply(
+    user_vols['userDominantSide_market'] = user_vols.apply(
         lambda x: (
             'neutral' if (x['bullish_vol'] + x['bearish_vol']) == 0
-            else ('bullish' if x['bullish_vol'] >= x['bearish_vol'] else 'bearish')
+            else ('bullish' if x['bullish_vol'] > x['bearish_vol']
+            else ('bearish' if x['bearish_vol'] > x['bullish_vol']
+            else 'neutral'))
         ),
         axis=1,
     )
 
-    return user_vols[['proxyWallet', 'userDominantSideRatio', 'userDominantSide']]
+    return user_vols[['proxyWallet', 'userDominantSideRatio_market', 'userDominantSide_market']]

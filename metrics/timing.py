@@ -13,13 +13,13 @@ def add_hours_before_resolution(
 
 
 def compute(transactions_df: pd.DataFrame, late_window: int = 24) -> pd.DataFrame:
-    """Compute lastTradeHoursBeforeResolution and lateVolumeRatio.
+    """Compute userLastTradeHoursBeforeResolution_market and userLateVolumeRatio_market.
 
     Requires hoursBeforeResolution column (added by add_hours_before_resolution).
 
-    lastTradeHoursBeforeResolution: minimum hoursBeforeResolution per user
+    userLastTradeHoursBeforeResolution_market: minimum hoursBeforeResolution per user
         (i.e. how close to resolution their last trade was).
-    lateVolumeRatio: fraction of USDC volume placed within late_window hours
+    userLateVolumeRatio_market: fraction of USDC volume placed within late_window hours
         of resolution.
     """
     user_timing = (
@@ -27,7 +27,7 @@ def compute(transactions_df: pd.DataFrame, late_window: int = 24) -> pd.DataFram
         .min()
         .reset_index()
     )
-    user_timing.columns = ['proxyWallet', 'lastTradeHoursBeforeResolution']
+    user_timing.columns = ['proxyWallet', 'userLastTradeHoursBeforeResolution_market']
 
     all_wallets = transactions_df['proxyWallet'].unique()
 
@@ -41,6 +41,6 @@ def compute(transactions_df: pd.DataFrame, late_window: int = 24) -> pd.DataFram
 
     user_late = (late_num / late_denom.replace(0, float('nan'))).fillna(0)
     user_late_volume = user_late.reset_index()
-    user_late_volume.columns = ['proxyWallet', 'lateVolumeRatio']
+    user_late_volume.columns = ['proxyWallet', 'userLateVolumeRatio_market']
 
     return user_timing.merge(user_late_volume, on='proxyWallet')

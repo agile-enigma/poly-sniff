@@ -96,91 +96,105 @@ def run(args: argparse.Namespace) -> None:
         print(f"\nExports written to: {output_dir}/")
 
 
+def _fmt(prog):
+    return argparse.HelpFormatter(prog, max_help_position=40, width=100)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description='Polymarket insider behavior detection tool',
-        formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position=40, width=100),
+        description='Polymarket analysis toolkit',
+        formatter_class=_fmt,
     )
-    parser.add_argument(
+    subparsers = parser.add_subparsers(dest='command', metavar='<command>')
+    subparsers.required = True
+
+    # ── sniff subcommand ──────────────────────────────────────────────────────
+    sniff = subparsers.add_parser(
+        'sniff',
+        help='Detect suspected insider traders in a market',
+        formatter_class=_fmt,
+    )
+    sniff.add_argument(
         'market_slug',
         help='slug of the Polymarket market to analyze',
     )
-    parser.add_argument(
+    sniff.add_argument(
         '--resolved-outcome',
         choices=['Yes', 'No'],
         default=None,
         help='If provided, only flags users whose dominant side matches the winning outcome',
     )
-    parser.add_argument(
+    sniff.add_argument(
         '--position-side',
         choices=['Yes', 'No'],
         default=config.POSITION_SIDE,
         help="Which side's top position holders to scrape (default: Yes)",
     )
-    parser.add_argument(
+    sniff.add_argument(
         '--limit',
         type=int,
         default=config.SCRAPER_LIMIT,
         help='Number of top position holders to scrape (default: 20)',
     )
-    parser.add_argument(
+    sniff.add_argument(
         '--late-window',
         type=int,
         default=config.LATE_WINDOW_HOURS,
         help='Hours before resolution that count as "late" trading (default: 24)',
     )
-    parser.add_argument(
+    sniff.add_argument(
         '--min-directional',
         type=float,
         default=config.MIN_DIRECTIONAL,
-        help='Minimum userDirectionalConsistency to flag (default: 0.85)',
+        help='Minimum userDirectionalConsistency_market to flag (default: 0.85)',
     )
-    parser.add_argument(
+    sniff.add_argument(
         '--min-dominant',
         type=float,
         default=config.MIN_DOMINANT,
-        help='Minimum userDominantSideRatio to flag (default: 0.90)',
+        help='Minimum userDominantSideRatio_market to flag (default: 0.90)',
     )
-    parser.add_argument(
+    sniff.add_argument(
         '--max-conviction',
         type=float,
         default=config.MAX_CONVICTION,
-        help='Maximum userPriceConvictionScore to flag (default: 0)',
+        help='Maximum userPriceConvictionScore_market to flag (default: 0)',
     )
-    parser.add_argument(
+    sniff.add_argument(
         '--min-late-volume',
         type=float,
         default=config.MIN_LATE_VOLUME,
-        help='Minimum lateVolumeRatio to flag (default: 0.50)',
+        help='Minimum userLateVolumeRatio_market to flag (default: 0.50)',
     )
-    parser.add_argument(
+    sniff.add_argument(
         '--export-profiles',
         action='store_true',
         help='Export profiles_df to profiles.xlsx',
     )
-    parser.add_argument(
+    sniff.add_argument(
         '--export-transactions',
         action='store_true',
         help='Export transactions_df to transactions.xlsx',
     )
-    parser.add_argument(
+    sniff.add_argument(
         '--export-scaffold',
         action='store_true',
         help='Export hourly scaffold to scaffold.xlsx',
     )
-    parser.add_argument(
+    sniff.add_argument(
         '--export-flagged',
         action='store_true',
         help='Export flagged users table to flagged_users.xlsx',
     )
-    parser.add_argument(
+    sniff.add_argument(
         '--export-all',
         action='store_true',
         help='Export all four xlsx files',
     )
+    sniff.set_defaults(func=run)
 
     args = parser.parse_args()
-    run(args)
+    args.func(args)
 
 
 if __name__ == '__main__':

@@ -21,10 +21,10 @@ def enrich(transactions_df: pd.DataFrame, profiles_df: pd.DataFrame) -> pd.DataF
 
     # Merge profile columns
     profile_merge_cols = [
-        'proxyWallet', 'joinDate_utc', 'trades_general', 'xUsername',
-        'anonymousUser', 'userName', 'avgPrice_marketUser_specific',
-        'totalBought_marketUser_specific', 'totalPnl_marketUser_specific',
-        'realizedPnl_marketUser_specific',
+        'proxyWallet', 'joinDate_utc', 'userMarketsTraded_lifetime', 'xUsername',
+        'anonymousUser', 'userName', 'userAvgPrice_market',
+        'userTotalBought_market', 'userTotalPnl_market',
+        'userRealizedPnl_market',
     ]
     df = df.merge(profiles_df[profile_merge_cols], on='proxyWallet', how='left')
 

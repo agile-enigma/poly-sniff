@@ -8,13 +8,13 @@ _PROFILE_COLS = [
     # User profile
     'userName', 'pseudonym', 'anonymousUser', 'bio',
     'profileImage', 'profileImageOptimized',
-    'joinDate_est', 'trades_general', 'xUsername',
+    'joinDate_est', 'userMarketsTraded_lifetime', 'xUsername',
     # User behavior metrics (one value per user per market)
-    'userDirectionalConsistency', 'userWeightedDirectionalConsistency',
-    'userDominantSideRatio', 'userDominantSide', 'userPriceConvictionScore',
-    'tradeCount', 'totalUsdcVolume', 'avgTradeSize', 'maxTradeSize',
-    'lastTradeHoursBeforeResolution', 'lateVolumeRatio',
-    'accountAgeAtFirstTrade', 'marketConcentrationRatio',
+    'userDirectionalConsistency_market', 'userWeightedDirectionalConsistency_market',
+    'userDominantSideRatio_market', 'userDominantSide_market', 'userPriceConvictionScore_market',
+    'userTradeCount_market', 'userTotalUsdcVolume_market', 'userAvgTradeSize_market', 'userMaxTradeSize_market',
+    'userLastTradeHoursBeforeResolution_market', 'userLateVolumeRatio_market',
+    'userAccountAgeAtFirstTrade_market',
 ]
 
 # Transaction-level numerics — fill with 0 for empty hours
@@ -46,17 +46,17 @@ def build(transactions_df: pd.DataFrame) -> pd.DataFrame:
         # User profile
         'userName', 'pseudonym', 'anonymousUser', 'bio',
         'profileImage', 'profileImageOptimized',
-        'joinDate_est', 'trades_general', 'xUsername',
+        'joinDate_est', 'userMarketsTraded_lifetime', 'xUsername',
         # Transaction metadata
         'transactionHash', 'asset', 'outcomeIndex', 'side', 'outcome',
         # User metrics
-        'userDirectionalConsistency', 'userWeightedDirectionalConsistency',
-        'userDominantSideRatio', 'userDominantSide', 'userPriceConvictionScore',
-        'tradeCount', 'totalUsdcVolume', 'avgTradeSize', 'maxTradeSize',
-        'lastTradeHoursBeforeResolution', 'lateVolumeRatio',
-        'accountAgeAtFirstTrade', 'marketConcentrationRatio',
-        'avgPrice_marketUser_specific', 'totalBought_marketUser_specific',
-        'totalPnl_marketUser_specific', 'realizedPnl_marketUser_specific',
+        'userDirectionalConsistency_market', 'userWeightedDirectionalConsistency_market',
+        'userDominantSideRatio_market', 'userDominantSide_market', 'userPriceConvictionScore_market',
+        'userTradeCount_market', 'userTotalUsdcVolume_market', 'userAvgTradeSize_market', 'userMaxTradeSize_market',
+        'userLastTradeHoursBeforeResolution_market', 'userLateVolumeRatio_market',
+        'userAccountAgeAtFirstTrade_market',
+        'userAvgPrice_market', 'userTotalBought_market',
+        'userTotalPnl_market', 'userRealizedPnl_market',
     ]
     for col in first_cols:
         if col in df.columns:

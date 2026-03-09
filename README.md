@@ -25,25 +25,33 @@ pip install -e .
 
 After installation, `poly_sniff` is available as a global command.
 
-## Quick start
-
-```bash
-poly_sniff will-x-happen-by-date
-```
-
 ## Usage
 
 ```
-poly_sniff <market_slug> [options]
+poly_sniff <command> [options]
 ```
 
-### Required
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `sniff` | Detect suspected insider traders in a market |
+
+---
+
+### `sniff`
+
+```
+poly_sniff sniff <market_slug> [options]
+```
+
+#### Required
 
 | Argument | Description |
 |----------|-------------|
 | `market_slug` | Slug of the Polymarket market to analyze. Found after `/event/` in the market URL, e.g. `polymarket.com/event/will-x-happen-by-date` |
 
-### Options
+#### Options
 
 | Flag | Default | Description |
 |------|---------|-------------|
@@ -53,7 +61,7 @@ poly_sniff <market_slug> [options]
 | `--late-window` | `24` | Hours before resolution that count as "late" trading. |
 | `--min-directional` | `0.85` | Minimum Directional Consistency to flag. |
 | `--min-dominant` | `0.90` | Minimum Dominant Side Ratio to flag. |
-| `--max-conviction` | `0` | Maximum Price ConvictionS core to flag. |
+| `--max-conviction` | `0` | Maximum Price Conviction Score to flag. |
 | `--min-late-volume` | `0.50` | Minimum Late Volume Ratio to flag. |
 | `--export-profiles` | — | Export user profiles to `profiles.xlsx`. |
 | `--export-transactions` | — | Export transaction data to `transactions.xlsx`. |
@@ -61,20 +69,20 @@ poly_sniff <market_slug> [options]
 | `--export-flagged` | — | Export flagged users with all metrics to `flagged_users.xlsx`. |
 | `--export-all` | — | Export all four xlsx files. |
 
-### Examples
+#### Examples
 
 ```bash
 # Basic run — prints flagged users to terminal
-poly_sniff will-x-happen-by-date
+poly_sniff sniff will-x-happen-by-date
 
 # Scrape top 50 No-side holders, flag only those who bet on the winning side
-poly_sniff will-x-happen-by-date --position-side No --limit 50 --resolved-outcome No
+poly_sniff sniff will-x-happen-by-date --position-side No --limit 50 --resolved-outcome No
 
 # Loosen thresholds to cast a wider net
-poly_sniff will-x-happen-by-date --min-directional 0.75 --min-dominant 0.80 --min-late-volume 0.30
+poly_sniff sniff will-x-happen-by-date --min-directional 0.75 --min-dominant 0.80 --min-late-volume 0.30
 
 # Export everything for further analysis in Tableau
-poly_sniff will-x-happen-by-date --export-all
+poly_sniff sniff will-x-happen-by-date --export-all
 ```
 
 ## Terminal output
@@ -97,10 +105,12 @@ Optionally, if --resolved-outcome is provided, an additional filter is applied: 
 Flagged users are printed as a table in the CLI.
 
 ```
-userName     proxyWallet   joinDate_est          xUsername
-───────────  ────────────  ────────────────────  ──────────
-suspectuser  0xa3f91...    2025-02-28 09:14:00   @suspect
-anonwhale    0x7cb02...    2025-03-01 01:30:00   —
+╭─────────────┬─────────────┬────────────┬──────────┬───────────────┬─────────────┬────────────────────┬────────────────╮
+│ User        │ Wallet      │ Joined     │ X Handle │ Dominant Side │ USDC Volume │ Intra-Market Trades│ Markets Traded │
+├─────────────┼─────────────┼────────────┼──────────┼───────────────┼─────────────┼────────────────────┼────────────────┤
+│ suspectuser │ 0xa3f91...  │ 2025-02-28 │ @suspect │ bullish       │ 8420.50     │ 12                 │ 3              │
+│ anonwhale   │ 0x7cb02...  │ 2025-03-01 │          │ bullish       │ 15300.00    │ 2                  │ 7              │
+╰─────────────┴─────────────┴────────────┴──────────┴───────────────┴─────────────┴────────────────────┴────────────────╯
 ```
 
 ## Exports
@@ -127,17 +137,25 @@ poly_sniff uses four behavioral metrics. A user must trip *all four* to be flagg
 
 Measures whether a user's trades all point in the same direction. A score of 1.0 means every trade was unidirectional. An insider doesn't flip back and forth — they know the answer and bet accordingly.
 
+Threshold for user flagging is configurable via `--min-directional`.
+
 ### Dominant side ratio
 
 Fraction of total USDC volume on the user's dominant side. Buying Yes and selling No both count as bullish; buying No and selling Yes both count as bearish. A ratio above 0.90 means the user committed nearly all their capital to one direction.
+
+Threshold for user flagging is configured via `--min-dominant`.
 
 ### Price conviction score
 
 USDC-weighted average of `(price - 0.50)`, flipped by trade side. A negative score means the user was buying at prices where the market hadn't yet moved in their direction — they were contrarian. Insiders trade *before* the market catches up, so they show up as contrarian. Someone buying Yes at 0.30 who turns out to be right is far more suspicious than someone buying Yes at 0.80.
 
+Threshold for user flagging is configured via `--max-directional`.
+
 ### Late volume ratio
 
-Fraction of the user's total USDC volume placed within the final hours before market resolution (configurable via `--late-window`). Insiders often act close to resolution because that's when they receive or confirm their information.
+Fraction of the user's total USDC volume placed within the final hours before market resolution (configurable via `--min-late-volume`, which detaults to 24). Insiders often act close to resolution because that's when they receive or confirm their information.
+
+Threshold for user flagging is configured via `--min-late-volume`.
 
 ### Resolved outcome filter
 

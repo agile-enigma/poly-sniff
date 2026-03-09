@@ -2,7 +2,7 @@ import pandas as pd
 
 
 def compute(transactions_df: pd.DataFrame) -> pd.DataFrame:
-    """Compute userPriceConvictionScore.
+    """Compute userPriceConvictionScore_market.
 
     USDC-weighted average of (price - 0.50) flipped by side.
     Negative = contrarian/informed (buying before market agrees).
@@ -20,5 +20,5 @@ def compute(transactions_df: pd.DataFrame) -> pd.DataFrame:
 
     user_conviction = (user_num / user_denom.replace(0, float('nan'))).fillna(0)
     result = user_conviction.reset_index()
-    result.columns = ['proxyWallet', 'userPriceConvictionScore']
+    result.columns = ['proxyWallet', 'userPriceConvictionScore_market']
     return result

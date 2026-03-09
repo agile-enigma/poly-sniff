@@ -1,0 +1,50 @@
+⏺ poly_sniff/                                                                                                                                                   
+  │                                                                                                                                                             
+  ├── __main__.py          Entry point. Parses CLI args, orchestrates the full pipeline,                                                                        
+  │                        and prints results to terminal.
+  │                                                                                                                                                             
+  ├── __init__.py          Marks the directory as a package (empty).
+  │
+  ├── config.py            Default values for all thresholds and scraper settings.
+  │                        Start here if you want to change any defaults.
+  │
+  ├── output.py            Two responsibilities:
+  │                        1. flag_users()  — applies the conjunctive insider filter
+  │                        2. print_table() — renders the terminal table
+  │                        Also: make_output_dir(), write_xlsx()
+  │
+  ├── scaffold.py          Builds the hourly hour×wallet grid for Tableau export.
+  │                        Expands transactions into a full time series per user.
+  │
+  ├── data/
+  │   ├── scraper.py       All Polymarket API calls.
+  │   │                    fetch_market_info() — resolves slug → conditionId + resolution time
+  │   │                    fetch()             — pulls holders, profiles, and transactions
+  │   │
+  │   ├── loader.py        Converts raw API lists into DataFrames.
+  │   │                    Discards non-dict transaction rows.
+  │   │
+  │   └── preprocessing.py Merges profile data into transactions. Computes base columns:
+  │                        usdcSize, netPosition, weightedPosition, netYes/No, etc.
+  │
+  ├── metrics/
+  │   ├── directional.py   userDirectionalConsistency_market
+  │   │                    userWeightedDirectionalConsistency_market
+  │   │
+  │   ├── dominance.py     userDominantSideRatio_market
+  │   │                    userDominantSide_market (bullish / bearish / neutral)
+  │   │
+  │   ├── conviction.py    userPriceConvictionScore_market
+  │   │
+  │   ├── timing.py        hoursBeforeResolution (per-transaction)
+  │   │                    userLastTradeHoursBeforeResolution_market (per-user)
+  │   │                    userLateVolumeRatio_market (per-user)
+  │   │
+  │   └── activity.py      userTradeCount_market, userTotalUsdcVolume_market
+  │                        userAvgTradeSize_market, userMaxTradeSize_market
+  │                        userAccountAgeAtFirstTrade_market
+  │
+  ├── pyproject.toml       Package metadata and dependencies.
+  ├── .gitignore           Excludes output_*/ folders, caches, venvs.
+  └── input_file.py        Original notebook code. Source of truth for all logic.
+                           Do not modify — reference only.
