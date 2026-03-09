@@ -68,10 +68,10 @@ def print_table(flagged_df: pd.DataFrame) -> None:
         print("No users flagged.")
         return
 
-    display = flagged_df[['userName', 'proxyWallet', 'joinDate_est', 'xUsername', 'userDominantSide_market', 'userTotalUsdcVolume_market', 'userTradeCount_market', 'userMarketsTraded_lifetime']].copy()
+    display = flagged_df[['userName', 'proxyWallet', 'joinDate_est', 'xUsername', 'userDominantSide_market', 'userRealizedPnl_market', 'userTotalUsdcVolume_market', 'userTradeCount_market', 'userMarketsTraded_lifetime']].copy()
     display['proxyWallet'] = display['proxyWallet'].str[:7] + '...'
     display['joinDate_est'] = pd.to_datetime(display['joinDate_est']).dt.strftime('%Y-%m-%d')
-    display.columns = ['User', 'Wallet', 'Joined', 'X Handle', 'Dominant Side', 'USDC Volume', 'Intra-Market Trades', 'Markets Traded']
+    display.columns = ['User', 'Wallet', 'Joined', 'X Handle', 'Dominant Side', 'Realized PnL', 'USDC Volume', 'Intra-Market Trades', 'Markets Traded']
 
     if _HAS_TABULATE:
         print(tabulate(display, headers='keys', tablefmt='rounded_grid', showindex=False))
