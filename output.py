@@ -79,10 +79,22 @@ def print_table(flagged_df: pd.DataFrame) -> None:
         print(display.to_string(index=False))
 
 
-def make_output_dir(condition_id: str) -> str:
-    """Create and return the timestamped output folder path."""
+_TERMINAL_LIMIT = 20
+
+_CLOSED_COLS = ['title', 'slug', 'outcome', 'avgPrice', 'totalBought', 'realizedPnl', 'curPrice']
+_ACTIVE_COLS = ['title', 'slug', 'size', 'avgPrice', 'totalBought', 'currentValue', 'cashPnl', 'percentPnl', 'realizedPnl', 'curPrice']
+
+
+def _truncate_str_col(series: pd.Series, max_len: int = 40) -> pd.Series:
+    return series.apply(
+        lambda x: x[:max_len] + '...' if isinstance(x, str) and len(x) > max_len else x
+    )
+
+
+def make_output_dir(key: str, subcommand: str = 'sniff') -> str:
+    """Create and return a timestamped output folder under polysniff_output/{subcommand}/."""
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    folder = f"output_{condition_id[:7]}_{timestamp}"
+    folder = os.path.join('polysniff_output', subcommand, f"{key[:7]}_{timestamp}")
     os.makedirs(folder, exist_ok=True)
     return folder
 
@@ -103,3 +115,44 @@ def write_xlsx(
         scaffold_df.to_excel(os.path.join(output_dir, 'scaffold.xlsx'), index=False)
     if flagged_df is not None:
         flagged_df.to_excel(os.path.join(output_dir, 'flagged_users.xlsx'), index=False)
+
+
+def _print_positions_section(
+    title: str, df: pd.DataFrame, cols: list, label: str
+) -> None:
+    """Print a single positions section (closed or active) to terminal."""
+    print(title)
+    if df.empty:
+        print(f"No {label} positions.")
+        print()
+        return
+    display = df[[c for c in cols if c in df.columns]].copy()
+    for col in ('title', 'slug'):
+        if col in display.columns:
+            display[col] = _truncate_str_col(display[col])
+    total = len(display)
+    if _HAS_TABULATE:
+        print(tabulate(display.head(_TERMINAL_LIMIT), headers='keys', tablefmt='rounded_grid', showindex=False))
+    else:
+        print(display.head(_TERMINAL_LIMIT).to_string(index=False))
+    if total > _TERMINAL_LIMIT:
+        print(f"Showing {_TERMINAL_LIMIT} of {total} {label} positions. Use --export to see all.")
+    print()
+
+
+def print_positions_tables(closed_df: pd.DataFrame, active_df: pd.DataFrame) -> None:
+    """Print closed and active positions tables to terminal (max 20 rows each)."""
+    _print_positions_section('Closed Positions', closed_df, _CLOSED_COLS, 'closed')
+    _print_positions_section('Active Positions', active_df, _ACTIVE_COLS, 'active')
+
+
+def write_positions_xlsx(
+    output_dir: str,
+    closed_df: pd.DataFrame,
+    active_df: pd.DataFrame,
+) -> None:
+    """Write closed and active positions to a two-sheet positions.xlsx."""
+    path = os.path.join(output_dir, 'positions.xlsx')
+    with pd.ExcelWriter(path, engine='openpyxl') as writer:
+        closed_df.to_excel(writer, sheet_name='Closed', index=False)
+        active_df.to_excel(writer, sheet_name='Active', index=False)

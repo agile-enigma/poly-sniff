@@ -1,4 +1,5 @@
 import argparse
+import sys
 
 import pandas as pd
 
@@ -23,9 +24,11 @@ def _merge(transactions_df: pd.DataFrame, metric_df: pd.DataFrame) -> pd.DataFra
 def run(args: argparse.Namespace) -> None:
     # 1. Scrape
     print(f"\nFetching data for market '{args.market_slug}'...")
-    condition_id, resolution_time = scraper.fetch_market_info(args.market_slug)
+    market = scraper.fetch_market_info(args.market_slug)
+    condition_id = market['conditionId']
+    reference_time = scraper.get_reference_time(market, args.reference_time)
     print(f"  conditionId  : {condition_id}")
-    print(f"  resolution   : {resolution_time}")
+    print(f"  reference    : {reference_time}")
     profile_rows, transaction_rows = scraper.fetch(
         condition_id,
         position_side=args.position_side,
@@ -42,7 +45,7 @@ def run(args: argparse.Namespace) -> None:
     transactions_df = preprocessing.enrich(transactions_df, profiles_df)
 
     # 4. Add per-transaction timing column
-    transactions_df = timing.add_hours_before_resolution(transactions_df, resolution_time)
+    transactions_df = timing.add_hours_before_resolution(transactions_df, reference_time)
 
     # 5. Compute per-user metrics
     print("\nComputing metrics...")
@@ -80,7 +83,7 @@ def run(args: argparse.Namespace) -> None:
     ])
 
     if do_export:
-        output_dir = output.make_output_dir(condition_id)
+        output_dir = output.make_output_dir(condition_id, subcommand='sniff')
 
         scaffold_df = None
         if args.export_all or args.export_scaffold:
@@ -94,6 +97,30 @@ def run(args: argparse.Namespace) -> None:
             flagged_df=flagged_df if (args.export_all or args.export_flagged) else None,
         )
         print(f"\nExports written to: {output_dir}/")
+
+
+def run_profile(args: argparse.Namespace) -> None:
+    # Validate wallet address
+    if not (args.proxy_wallet.startswith('0x') and len(args.proxy_wallet) == 42):
+        sys.exit("Error: proxyWallet must start with '0x' and be 42 characters long.")
+
+    print(f"\nFetching positions for wallet '{args.proxy_wallet}'...")
+    closed_rows, active_rows = scraper.fetch_profile_positions(
+        args.proxy_wallet, limit=args.limit
+    )
+    print(f"  closed positions : {len(closed_rows)}")
+    print(f"  active positions : {len(active_rows)}")
+
+    closed_df = pd.DataFrame(closed_rows) if closed_rows else pd.DataFrame()
+    active_df = pd.DataFrame(active_rows) if active_rows else pd.DataFrame()
+
+    print()
+    output.print_positions_tables(closed_df, active_df)
+
+    if args.export:
+        output_dir = output.make_output_dir(args.proxy_wallet, subcommand='profile')
+        output.write_positions_xlsx(output_dir, closed_df, active_df)
+        print(f"Export written to: {output_dir}/")
 
 
 def _fmt(prog):
@@ -117,6 +144,13 @@ def main() -> None:
     sniff.add_argument(
         'market_slug',
         help='slug of the Polymarket market to analyze',
+    )
+    sniff.add_argument(
+        '--reference-time',
+        default=None,
+        metavar='DATETIME',
+        help='Reference time for timing metrics (e.g. "2025-03-15" or "2025-03-15 14:00"). '
+             'Overrides closedTime for resolved markets. Must not be in the future.',
     )
     sniff.add_argument(
         '--resolved-outcome',
@@ -192,6 +226,29 @@ def main() -> None:
         help='Export all four xlsx files',
     )
     sniff.set_defaults(func=run)
+
+    # ── profile subcommand ────────────────────────────────────────────────────
+    profile = subparsers.add_parser(
+        'profile',
+        help='Look up closed and active positions for a wallet address',
+        formatter_class=_fmt,
+    )
+    profile.add_argument(
+        'proxy_wallet',
+        help='Ethereum wallet address to look up (must start with 0x, 42 characters)',
+    )
+    profile.add_argument(
+        '--limit',
+        type=int,
+        default=20,
+        help='Maximum number of positions to fetch from each endpoint (default: 20)',
+    )
+    profile.add_argument(
+        '--export',
+        action='store_true',
+        help='Export all positions to positions.xlsx (two sheets: Closed and Active)',
+    )
+    profile.set_defaults(func=run_profile)
 
     args = parser.parse_args()
     args.func(args)
