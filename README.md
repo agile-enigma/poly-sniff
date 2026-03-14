@@ -1,10 +1,10 @@
 # poly_sniff
 
-A CLI tool that sniffs out suspicious betting behavior on [Polymarket](https://polymarket.com) prediction markets. It scrapes transaction data for a given market, computes behavioral metrics for each user, and flags those whose trading patterns are suggestive of insider knowledge.
+A CLI tool that sniffs out suspicious betting behavior on [Polymarket](https://polymarket.com) prediction markets. Analyze a market to flag suspicious users, or analyze a user to flag suspicious markets. Both approaches apply the same behavioral metrics — directional consistency, capital concentration, contrarian pricing, and late trading — to surface patterns suggestive of insider knowledge.
 
 ## How it works
 
-poly_sniff pulls the top position holders for a market, retrieves their full transaction histories within that market, and runs four behavioral metrics against each user. Users who pass *all four* thresholds simultaneously are flagged and printed to terminal.
+poly_sniff works in two directions. The sniff subcommand takes a market, pulls its top position holders, and flags users whose trading behavior is suspicious. The profile subcommand takes a user's wallet, pulls their market history, and — with the --sniff flag — flags markets where their behavior is suspicious. Both apply the same four behavioral metrics, and a flag is only raised when all four thresholds are tripped simultaneously.
 
 The core idea: an insider doesn't hedge, doesn't follow the crowd, and tends to act late. poly_sniff looks for exactly that — unidirectional conviction, contrarian pricing, capital concentration on one side, and disproportionate activity near resolution.
 
@@ -31,7 +31,7 @@ After installation, `poly_sniff` is available as a global command.
 poly_sniff <command> [options]
 ```
 
-### Subcommands
+## Subcommands
 
 | Command | Description |
 |---------|-------------|
