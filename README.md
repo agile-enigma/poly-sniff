@@ -61,13 +61,13 @@ Each metric is detailed in the **Detection metrics** section below.
 
 Optionally, if `--resolved-outcome` is provided, an additional filter is applied: only users whose dominant side matches the winning outcome are kept (bullish for Yes, bearish for No). When omitted, users are flagged in both directions, which is useful for pre-resolution analysis.
 
-#### Required
+#### REQUIRED
 
 | Argument | Description |
 |----------|-------------|
 | `market_slug` | Slug of the Polymarket market to analyze. The final path segment found in a market event URL, e.g. `will-x-happen-by-date` in `polymarket.com/event/will-x-happen-by-date` |
 
-#### Options
+#### OPTIONS
 
 | Flag | Default | Description |
 |------|---------|-------------|
@@ -86,7 +86,7 @@ Optionally, if `--resolved-outcome` is provided, an additional filter is applied
 | `--export-flagged` | — | Export flagged users with all metrics to `flagged_users.xlsx`. |
 | `--export-all` | — | Export all four xlsx files. |
 
-#### Reference time
+#### Reference Time
 
 The reference time anchors all timing metrics. It is resolved in this priority order:
 
@@ -96,7 +96,7 @@ The reference time anchors all timing metrics. It is resolved in this priority o
 
 This means `sniff` works on both resolved and active markets. For active markets, supply a `--reference-time` to define your analysis window.
 
-#### Terminal output
+#### TERMINAL OUTPUT
 
 Flagged users are printed to terminal as a table.
 
@@ -109,7 +109,7 @@ Flagged users are printed to terminal as a table.
 ╰─────────────┴─────────────┴────────────┴──────────┴───────────────┴──────────────┴─────────────┴─────────────────────┴────────────────╯
 ```
 
-#### Exports
+#### EXPORTS
 
 When any `--export-*` flag is set, xlsx files are placed in a timestamped folder:
 
@@ -125,7 +125,7 @@ The `flagged_users.xlsx` includes all metric values for each flagged user, not j
 
 When provided as a flag to the sniff subcommand, `--export-scaffold` produces an hourly time-series grid (every hour × every user) suitable for Tableau line chart visualization. It includes cumulative position columns (`cumNetPosition`, `cumWeightedPosition`) that show how each user's directional exposure built up over time. An insider's cumulative position will look like a steady ramp in one direction, especially steepening near the end.
 
-#### Examples
+#### EXAMPLES
 
 ```bash
 # Basic run — prints flagged users to terminal
@@ -157,13 +157,13 @@ poly_sniff profile <proxy_wallet> [options]
 
 Look up the closed and active Polymarket positions for any wallet address. Setting the `--sniff` flag additionally runs the user's activity in each of the corresponding markets through the insider detection metrics detailed blow.
 
-#### Required
+#### REQUIRED
 
 | Argument | Description |
 |----------|-------------|
 | `proxy_wallet` | Ethereum wallet address to look up. Must start with `0x` and be exactly 42 characters long. Validated before any API call. |
 
-#### Options
+#### OPTIONS
 
 | Flag | Default | Description |
 |------|---------|-------------|
@@ -187,7 +187,7 @@ Look up the closed and active Polymarket positions for any wallet address. Setti
 
 The `--sniff` flag augments profile functionality by running the user's activity in each of the markets corresponding to their fetched position through the insider detection metrics. This is done only for markets that the queried user has closed positions in.
 
-#### Terminal Output
+#### TERMINAL OUTPUT
 
 In default mode (i.e. without the --sniff flag set), user positions are printed — closed positions first, then active. A maximum of 20 rows per table is shown in terminal. If results exceed 20, a message is printed below the table indicating the total count and suggesting `--export-positions` to see all.
 
@@ -197,7 +197,7 @@ In default mode (i.e. without the --sniff flag set), user positions are printed 
 
 When the `--sniff` flag is set, the profile subcommand will instead output to terminal a table each row of which represents a market within which the script detected suspicious activity for the queried user.
 
-#### Exports
+#### EXPORTS
 
 When `--export-*` is set, xlsx files are placed in a timestamped folder:
 
@@ -213,7 +213,7 @@ Each sheet contains every field returned by the API — no column filtering or t
 
 When provided as a flag to the profile subcommand, `--export-scaffold` produces an hourly time-series grid (every hour × every market) suitable for Tableau line chart visualization. It includes cumulative position columns (`cumNetPosition`, `cumWeightedPosition`) that show how the user's directional exposure built up within each fetched market over time. An insider's cumulative position will look like a steady ramp in one direction, especially steepening near the end.
 
-#### Examples
+#### EXAMPLES
 
 ```bash
 # Basic lookup — prints closed and active positions to terminal
