@@ -46,6 +46,21 @@ poly_sniff <command> [options]
 poly_sniff sniff <market_slug> [options]
 ```
 
+The sniff subcommand passes the top position holders within a queried market through a conjunctive filter — all four conditions must be satisfied simultaneously — for insider detection flagging.
+
+The four criteria are:
+
+1. **Directional Consistency** ≥ 0.85
+2. **Dominant Side Ratio** ≥ 0.90
+3. **Price Conviction Score** < 0
+4. **Late Volume Ratio** ≥ 0.50
+
+All thresholds are configurable via CLI flags. Defaults live in config.py.
+
+Each metric is detailed in the **Detection metrics** section below.
+
+Optionally, if `--resolved-outcome` is provided, an additional filter is applied: only users whose dominant side matches the winning outcome are kept (bullish for Yes, bearish for No). When omitted, users are flagged in both directions, which is useful for pre-resolution analysis.
+
 #### Required
 
 | Argument | Description |
@@ -111,7 +126,7 @@ poly_sniff sniff will-x-happen-by-date --export-all
 poly_sniff profile <proxy_wallet> [options]
 ```
 
-Look up the closed and active Polymarket positions for any wallet address.
+Look up the closed and active Polymarket positions for any wallet address. Setting the `--sniff` flag additionally runs the user's activity in each of the corresponding markets through the insider detection metrics detailed blow.
 
 #### Required
 
@@ -139,6 +154,9 @@ Look up the closed and active Polymarket positions for any wallet address.
 | `--export-flagged` | — | Export flagged users with all metrics to `flagged_markets.xlsx`. Requires --sniff. |
 | `--export-all` | — | Export all five xlsx files. Only applicable when using --sniff. |
 
+#### --sniff flag
+
+The `--sniff` flag augments profile functionality by running the user's activity in each of the markets corresponding to their fetched position through the insider detection metrics. This is done only for markets that the queried user has closed positions in.
 
 #### Examples
 
@@ -204,22 +222,7 @@ When `--resolved-outcome` is provided, an additional filter is applied: only use
 
 ### sniff
 
-poly_sniff flags users through a conjunctive filter — all four conditions must be satisfied simultaneously. A user who passes only two or three criteria is not flagged.
-
-The four criteria are:
-
-1. **Directional Consistency** ≥ 0.85
-2. **Dominant Side Ratio** ≥ 0.90
-3. **Price Conviction Score** < 0
-4. **Late Volume Ratio** ≥ 0.50
-
-All thresholds are configurable via CLI flags. Defaults live in config.py.
-
-Each metric is detailed in the **Detection metrics** section below.
-
-Optionally, if `--resolved-outcome` is provided, an additional filter is applied: only users whose dominant side matches the winning outcome are kept (bullish for Yes, bearish for No). When omitted, users are flagged in both directions, which is useful for pre-resolution analysis.
-
-Flagged users are printed as a table in the CLI.
+Flagged users are printed to terminal as a table.
 
 ```
 ╭─────────────┬─────────────┬────────────┬──────────┬───────────────┬──────────────┬─────────────┬─────────────────────┬────────────────╮
@@ -232,13 +235,13 @@ Flagged users are printed as a table in the CLI.
 
 ### profile
 
-In default mode (i.e. without the --sniff flag set), tables are printed — closed positions first, then active. A maximum of 20 rows per table is shown in terminal. If results exceed 20, a message is printed below the table indicating the total count and suggesting `--export` to see all.
+In default mode (i.e. without the --sniff flag set), user positions are printed — closed positions first, then active. A maximum of 20 rows per table is shown in terminal. If results exceed 20, a message is printed below the table indicating the total count and suggesting `--export-positions` to see all.
 
 **Closed positions columns:** Title, Slug, Outcome, Avg Price, Total Bought, Realized PnL, Current Price
 
 **Active positions columns:** Title, Slug, Size, Avg Price, Total Bought, Current Value, Cash PnL, % PnL, Realized PnL, Current Price
 
-When the --sniff flag is set, profile will
+When the --sniff flag is set, profile will output a table to terminal, each row of which represents a market within which the script detected suspicious activity for the queried user.
 
 ## Exports
 
