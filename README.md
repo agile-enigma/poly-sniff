@@ -96,6 +96,35 @@ The reference time anchors all timing metrics. It is resolved in this priority o
 
 This means `sniff` works on both resolved and active markets. For active markets, supply a `--reference-time` to define your analysis window.
 
+#### Terminal output
+
+Flagged users are printed to terminal as a table.
+
+```
+╭─────────────┬─────────────┬────────────┬──────────┬───────────────┬──────────────┬─────────────┬─────────────────────┬────────────────╮
+│ User        │ Wallet      │ Joined     │ X Handle │ Dominant Side │ Realized PnL │ USDC Volume │ Intra-Market Trades │ Markets Traded │
+├─────────────┼─────────────┼────────────┼──────────┼───────────────┼──────────────┼─────────────┼─────────────────────┼────────────────┤
+│ suspectuser │ 0xa3f91...  │ 2025-02-28 │ @suspect │ bullish       │ 3100.00      │ 8420.50     │ 12                  │ 3              │
+│ anonwhale   │ 0x7cb02...  │ 2025-03-01 │          │ bullish       │ 9800.00      │ 15300.00    │ 2                   │ 7              │
+╰─────────────┴─────────────┴────────────┴──────────┴───────────────┴──────────────┴─────────────┴─────────────────────┴────────────────╯
+```
+
+#### Exports
+
+When any `--export-*` flag is set, xlsx files are placed in a timestamped folder:
+
+```
+polysniff_output/sniff/will-x_20250307_141523/
+├── profiles.xlsx
+├── transactions.xlsx
+├── scaffold.xlsx
+└── flagged_users.xlsx
+```
+
+The `flagged_users.xlsx` includes all metric values for each flagged user, not just the summary columns shown in terminal.
+
+When provided as a flag to the sniff subcommand, `--export-scaffold` produces an hourly time-series grid (every hour × every user) suitable for Tableau line chart visualization. It includes cumulative position columns (`cumNetPosition`, `cumWeightedPosition`) that show how each user's directional exposure built up over time. An insider's cumulative position will look like a steady ramp in one direction, especially steepening near the end.
+
 #### Examples
 
 ```bash
@@ -158,6 +187,32 @@ Look up the closed and active Polymarket positions for any wallet address. Setti
 
 The `--sniff` flag augments profile functionality by running the user's activity in each of the markets corresponding to their fetched position through the insider detection metrics. This is done only for markets that the queried user has closed positions in.
 
+#### Terminal Output
+
+In default mode (i.e. without the --sniff flag set), user positions are printed — closed positions first, then active. A maximum of 20 rows per table is shown in terminal. If results exceed 20, a message is printed below the table indicating the total count and suggesting `--export-positions` to see all.
+
+**Closed positions columns:** Title, Slug, Outcome, Avg Price, Total Bought, Realized PnL, Current Price
+
+**Active positions columns:** Title, Slug, Size, Avg Price, Total Bought, Current Value, Cash PnL, % PnL, Realized PnL, Current Price
+
+When the `--sniff` flag is set, the profile subcommand will instead output to terminal a table each row of which represents a market within which the script detected suspicious activity for the queried user.
+
+#### Exports
+
+When `--export-*` is set, xlsx files are placed in a timestamped folder:
+
+```
+polysniff_output/profile/0xabc12_20250307_141523/
+└── positions.xlsx   ← sheets: Closed, Active
+├── transactions.xlsx
+├── scaffold.xlsx
+└── flagged_markets.xlsx
+```
+
+Each sheet contains every field returned by the API — no column filtering or truncation. All fetched rows are included, not just the 20 shown in terminal.
+
+When provided as a flag to the profile subcommand, `--export-scaffold` produces an hourly time-series grid (every hour × every market) suitable for Tableau line chart visualization. It includes cumulative position columns (`cumNetPosition`, `cumWeightedPosition`) that show how the user's directional exposure built up within each fetched market over time. An insider's cumulative position will look like a steady ramp in one direction, especially steepening near the end.
+
 #### Examples
 
 ```bash
@@ -214,68 +269,9 @@ Threshold for user flagging is configured via `--min-late-volume`.
 
 ### Resolved outcome filter
 
-When `--resolved-outcome` is provided, an additional filter is applied: only users whose dominant side matches the winning outcome are flagged. Someone who bet heavily on the losing side with high confidence isn't an insider — they're just wrong.
+When `--resolved-outcome` is provided (applicable to the sniff subcommand only), an additional filter is applied: only users whose dominant side matches the winning outcome are flagged. Someone who bet heavily on the losing side with high confidence isn't an insider — they're just wrong.
 
 ---
-
-## Terminal output
-
-### sniff
-
-Flagged users are printed to terminal as a table.
-
-```
-╭─────────────┬─────────────┬────────────┬──────────┬───────────────┬──────────────┬─────────────┬─────────────────────┬────────────────╮
-│ User        │ Wallet      │ Joined     │ X Handle │ Dominant Side │ Realized PnL │ USDC Volume │ Intra-Market Trades │ Markets Traded │
-├─────────────┼─────────────┼────────────┼──────────┼───────────────┼──────────────┼─────────────┼─────────────────────┼────────────────┤
-│ suspectuser │ 0xa3f91...  │ 2025-02-28 │ @suspect │ bullish       │ 3100.00      │ 8420.50     │ 12                  │ 3              │
-│ anonwhale   │ 0x7cb02...  │ 2025-03-01 │          │ bullish       │ 9800.00      │ 15300.00    │ 2                   │ 7              │
-╰─────────────┴─────────────┴────────────┴──────────┴───────────────┴──────────────┴─────────────┴─────────────────────┴────────────────╯
-```
-
-### profile
-
-In default mode (i.e. without the --sniff flag set), user positions are printed — closed positions first, then active. A maximum of 20 rows per table is shown in terminal. If results exceed 20, a message is printed below the table indicating the total count and suggesting `--export-positions` to see all.
-
-**Closed positions columns:** Title, Slug, Outcome, Avg Price, Total Bought, Realized PnL, Current Price
-
-**Active positions columns:** Title, Slug, Size, Avg Price, Total Bought, Current Value, Cash PnL, % PnL, Realized PnL, Current Price
-
-When the --sniff flag is set, profile will output a table to terminal, each row of which represents a market within which the script detected suspicious activity for the queried user.
-
-## Exports
-
-### sniff
-
-When any `--export-*` flag is set, xlsx files are placed in a timestamped folder:
-
-```
-polysniff_output/sniff/will-x_20250307_141523/
-├── profiles.xlsx
-├── transactions.xlsx
-├── scaffold.xlsx
-└── flagged_users.xlsx
-```
-
-The `flagged_users.xlsx` includes all metric values for each flagged user, not just the summary columns shown in terminal.
-
-When provided as a flag to the sniff subcommand, `--export-scaffold` produces an hourly time-series grid (every hour × every user) suitable for Tableau line chart visualization. It includes cumulative position columns (`cumNetPosition`, `cumWeightedPosition`) that show how each user's directional exposure built up over time. An insider's cumulative position will look like a steady ramp in one direction, especially steepening near the end.
-
-### profile
-
-When `--export-*` is set, xlsx files are placed in a timestamped folder:
-
-```
-polysniff_output/profile/0xabc12_20250307_141523/
-└── positions.xlsx   ← sheets: Closed, Active
-├── transactions.xlsx
-├── scaffold.xlsx
-└── flagged_markets.xlsx
-```
-
-Each sheet contains every field returned by the API — no column filtering or truncation. All fetched rows are included, not just the 20 shown in terminal.
-
-When provided as a flag to the profile subcommand, `--export-scaffold` produces an hourly time-series grid (every hour × every market) suitable for Tableau line chart visualization. It includes cumulative position columns (`cumNetPosition`, `cumWeightedPosition`) that show how the user's directional exposure built up within each fetched market over time. An insider's cumulative position will look like a steady ramp in one direction, especially steepening near the end.
 
 ## Requirements
 
