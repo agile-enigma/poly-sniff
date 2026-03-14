@@ -125,6 +125,8 @@ Look up the closed and active Polymarket positions for any wallet address.
 |------|---------|-------------|
 | `--limit` | `20` | Maximum number of positions to fetch from each endpoint. Paginates automatically if the limit exceeds the API's per-request max (50 for closed, 500 for active). |
 | `--export` | — | Export all positions to `positions.xlsx` (two sheets: Closed and Active). |
+| `--active-only` | — | Fetch only active positions; skip closed positions. Mutually exclusive with `--closed-only`. |
+| `--closed-only` | — | Fetch only closed positions; skip active positions. Mutually exclusive with `--active-only`. |
 
 #### Examples
 
@@ -134,6 +136,12 @@ poly_sniff profile 0xabc1234567890abcdef1234567890abcdef12345
 
 # Fetch up to 200 positions per endpoint
 poly_sniff profile 0xabc1234567890abcdef1234567890abcdef12345 --limit 200
+
+# Active positions only
+poly_sniff profile 0xabc1234567890abcdef1234567890abcdef12345 --active-only
+
+# Closed positions only
+poly_sniff profile 0xabc1234567890abcdef1234567890abcdef12345 --closed-only
 
 # Export to xlsx
 poly_sniff profile 0xabc1234567890abcdef1234567890abcdef12345 --export

@@ -62,6 +62,32 @@ def flag_users(
     )
 
 
+def flag_markets(
+    transactions_df: pd.DataFrame,
+    min_directional: float,
+    min_dominant: float,
+    max_conviction: float,
+    min_late_volume: float,
+) -> pd.DataFrame:
+    """Apply conjunctive flagging filter and return one row per flagged market."""
+    mask = (
+        (transactions_df['userDirectionalConsistency_market'] >= min_directional)
+        & (transactions_df['userDominantSideRatio_market'] >= min_dominant)
+        & (transactions_df['userPriceConvictionScore_market'] < max_conviction)
+        & (transactions_df['userLateVolumeRatio_market'] >= min_late_volume)
+    )
+
+    base_cols = ['conditionId', 'title', 'slug']
+    available_base = [c for c in base_cols if c in transactions_df.columns]
+    metric_cols = [c for c in _METRIC_COLS if c in transactions_df.columns]
+
+    return (
+        transactions_df.loc[mask, available_base + metric_cols]
+        .drop_duplicates(subset=['conditionId'])
+        .reset_index(drop=True)
+    )
+
+
 def print_table(flagged_df: pd.DataFrame) -> None:
     """Print flagged users table to terminal."""
     if flagged_df.empty:
@@ -72,6 +98,35 @@ def print_table(flagged_df: pd.DataFrame) -> None:
     display['proxyWallet'] = display['proxyWallet'].str[:7] + '...'
     display['joinDate_est'] = pd.to_datetime(display['joinDate_est']).dt.strftime('%Y-%m-%d')
     display.columns = ['User', 'Wallet', 'Joined', 'X Handle', 'Dominant Side', 'Realized PnL', 'USDC Volume', 'Intra-Market Trades', 'Markets Traded']
+
+    if _HAS_TABULATE:
+        print(tabulate(display, headers='keys', tablefmt='rounded_grid', showindex=False))
+    else:
+        print(display.to_string(index=False))
+
+
+def print_flagged_markets_table(flagged_df: pd.DataFrame) -> None:
+    """Print flagged markets table to terminal."""
+    if flagged_df.empty:
+        print("No markets flagged.")
+        return
+
+    cols = ['title', 'slug', 'userDominantSide_market', 'userRealizedPnl_market',
+            'userTotalUsdcVolume_market', 'userTradeCount_market']
+    available = [c for c in cols if c in flagged_df.columns]
+    display = flagged_df[available].copy()
+    if 'title' in display.columns:
+        display['title'] = _truncate_str_col(display['title'])
+
+    col_labels = {
+        'title': 'Title',
+        'slug': 'Slug',
+        'userDominantSide_market': 'Dominant Side',
+        'userRealizedPnl_market': 'Realized PnL',
+        'userTotalUsdcVolume_market': 'USDC Volume',
+        'userTradeCount_market': 'Trade Count',
+    }
+    display.columns = [col_labels.get(c, c) for c in available]
 
     if _HAS_TABULATE:
         print(tabulate(display, headers='keys', tablefmt='rounded_grid', showindex=False))
@@ -99,7 +154,7 @@ def make_output_dir(key: str, subcommand: str = 'sniff') -> str:
     return folder
 
 
-def write_xlsx(
+def write_sniff_exports(
     output_dir: str,
     profiles_df: pd.DataFrame = None,
     transactions_df: pd.DataFrame = None,
@@ -136,7 +191,7 @@ def _print_positions_section(
     else:
         print(display.head(_TERMINAL_LIMIT).to_string(index=False))
     if total > _TERMINAL_LIMIT:
-        print(f"Showing {_TERMINAL_LIMIT} of {total} {label} positions. Use --export to see all.")
+        print(f"Showing {_TERMINAL_LIMIT} of {total} {label} positions. Use --export-positions to see all.")
     print()
 
 
@@ -146,13 +201,35 @@ def print_positions_tables(closed_df: pd.DataFrame, active_df: pd.DataFrame) -> 
     _print_positions_section('Active Positions', active_df, _ACTIVE_COLS, 'active')
 
 
-def write_positions_xlsx(
+def write_profile_exports(
     output_dir: str,
-    closed_df: pd.DataFrame,
-    active_df: pd.DataFrame,
+    closed_df: pd.DataFrame = None,
+    active_df: pd.DataFrame = None,
+    profiles_df: pd.DataFrame = None,
+    transactions_df: pd.DataFrame = None,
+    scaffold_df: pd.DataFrame = None,
+    flagged_df: pd.DataFrame = None,
 ) -> None:
-    """Write closed and active positions to a two-sheet positions.xlsx."""
-    path = os.path.join(output_dir, 'positions.xlsx')
-    with pd.ExcelWriter(path, engine='openpyxl') as writer:
-        closed_df.to_excel(writer, sheet_name='Closed', index=False)
-        active_df.to_excel(writer, sheet_name='Active', index=False)
+    """Write profile subcommand exports to output_dir.
+
+    closed_df / active_df → positions.xlsx (two sheets: Closed, Active).
+    profiles_df → profile.xlsx.
+    transactions_df → transactions.xlsx.
+    scaffold_df → scaffold.xlsx.
+    flagged_df → flagged_markets.xlsx.
+    """
+    if closed_df is not None or active_df is not None:
+        path = os.path.join(output_dir, 'positions.xlsx')
+        with pd.ExcelWriter(path, engine='openpyxl') as writer:
+            if closed_df is not None and not closed_df.empty:
+                closed_df.to_excel(writer, sheet_name='Closed', index=False)
+            if active_df is not None and not active_df.empty:
+                active_df.to_excel(writer, sheet_name='Active', index=False)
+    if profiles_df is not None:
+        profiles_df.to_excel(os.path.join(output_dir, 'profile.xlsx'), index=False)
+    if transactions_df is not None:
+        transactions_df.to_excel(os.path.join(output_dir, 'transactions.xlsx'), index=False)
+    if scaffold_df is not None:
+        scaffold_df.to_excel(os.path.join(output_dir, 'scaffold.xlsx'), index=False)
+    if flagged_df is not None:
+        flagged_df.to_excel(os.path.join(output_dir, 'flagged_markets.xlsx'), index=False)

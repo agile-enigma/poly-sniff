@@ -1,13 +1,15 @@
 import pandas as pd
 
 
-def compute(transactions_df: pd.DataFrame) -> pd.DataFrame:
+def compute(transactions_df: pd.DataFrame, group_by: str = 'proxyWallet') -> pd.DataFrame:
     """Compute userDominantSideRatio_market and userDominantSide_market.
 
     Bullish volume = BUY Yes + SELL No (USDC).
     Bearish volume = BUY No + SELL Yes (USDC).
     userDominantSideRatio_market = max(bullish, bearish) / total. Range 0.5–1.
     userDominantSide_market = 'bullish' | 'bearish' | 'neutral'.
+    group_by controls the grouping dimension (default: proxyWallet; use conditionId for
+    profile --sniff mode).
     """
     df = transactions_df.copy()
 
@@ -23,7 +25,7 @@ def compute(transactions_df: pd.DataFrame) -> pd.DataFrame:
     df['_bullish_vol'] = df['usdcSize'].where(is_bullish, 0)
     df['_bearish_vol'] = df['usdcSize'].where(is_bearish, 0)
 
-    user_vols = df.groupby('proxyWallet').agg(
+    user_vols = df.groupby(group_by).agg(
         bullish_vol=('_bullish_vol', 'sum'),
         bearish_vol=('_bearish_vol', 'sum'),
     ).reset_index()
@@ -44,4 +46,4 @@ def compute(transactions_df: pd.DataFrame) -> pd.DataFrame:
         axis=1,
     )
 
-    return user_vols[['proxyWallet', 'userDominantSideRatio_market', 'userDominantSide_market']]
+    return user_vols[[group_by, 'userDominantSideRatio_market', 'userDominantSide_market']]
