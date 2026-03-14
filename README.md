@@ -147,7 +147,7 @@ Look up the closed and active Polymarket positions for any wallet address.
 poly_sniff profile 0xabc1234567890abcdef1234567890abcdef12345
 
 # Insider detection — runs fetched market positions through insider detection metrics
-poly_sniff profile 0xabc1234567890abcdef1234567890abcdef12345
+poly_sniff profile 0xabc1234567890abcdef1234567890abcdef12345 --sniff
 
 # Fetch up to 200 positions per endpoint
 poly_sniff profile 0xabc1234567890abcdef1234567890abcdef12345 --limit 200
