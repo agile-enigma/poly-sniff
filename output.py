@@ -115,8 +115,9 @@ def print_flagged_markets_table(flagged_df: pd.DataFrame) -> None:
             'userTotalUsdcVolume_market', 'userTradeCount_market']
     available = [c for c in cols if c in flagged_df.columns]
     display = flagged_df[available].copy()
-    if 'title' in display.columns:
-        display['title'] = _truncate_str_col(display['title'])
+    for col in ('title', 'slug'):
+        if col in display.columns:
+            display[col] = _truncate_str_col(display[col])
 
     col_labels = {
         'title': 'Title',

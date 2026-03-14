@@ -31,12 +31,12 @@ After installation, `poly_sniff` is available as a global command.
 poly_sniff <command> [options]
 ```
 
-### Commands
+### Subcommands
 
 | Command | Description |
 |---------|-------------|
-| `sniff` | Detect suspected insider traders in a market |
-| `profile` | Look up closed and active positions for a wallet address |
+| `sniff` | Detect potential insider traders in a market |
+| `profile` | Look up closed and active positions for a wallet address. With the --sniff flag, this subcommand additionally runs user activity through insider detection metrics for each fetched market |
 
 ---
 
@@ -61,11 +61,11 @@ poly_sniff sniff <market_slug> [options]
 | `--position-side` | `Yes` | Which side's top position holders to scrape. |
 | `--limit` | `20` | Number of top position holders to scrape. |
 | `--late-window` | `24` | Hours before reference time that count as "late" trading. |
-| `--min-directional` | `0.85` | Minimum Directional Consistency to flag. |
-| `--min-dominant` | `0.90` | Minimum Dominant Side Ratio to flag. |
-| `--max-conviction` | `0` | Maximum Price Conviction Score to flag. |
-| `--min-late-volume` | `0.50` | Minimum Late Volume Ratio to flag. |
-| `--export-profiles` | — | Export user profiles to `profiles.xlsx`. |
+| `--min-directional` | `0.85` | Minimum Directional Consistency threshold to flag. |
+| `--min-dominant` | `0.90` | Minimum Dominant Side Ratio threshold to flag. |
+| `--max-conviction` | `0` | Maximum Price Conviction Score threshold to flag. |
+| `--min-late-volume` | `0.50` | Minimum Late Volume Ratio threshold to flag. |
+| `--export-profiles` | — | Export user profile information to `profiles.xlsx`. |
 | `--export-transactions` | — | Export transaction data to `transactions.xlsx`. |
 | `--export-scaffold` | — | Export hourly scaffold to `scaffold.xlsx`. |
 | `--export-flagged` | — | Export flagged users with all metrics to `flagged_users.xlsx`. |
@@ -123,15 +123,30 @@ Look up the closed and active Polymarket positions for any wallet address.
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--limit` | `20` | Maximum number of positions to fetch from each endpoint. Paginates automatically if the limit exceeds the API's per-request max (50 for closed, 500 for active). |
-| `--export` | — | Export all positions to `positions.xlsx` (two sheets: Closed and Active). |
+| `--sniff` | — | Analyze closed markets for suspicious trading behavior for the queried user. |
 | `--active-only` | — | Fetch only active positions; skip closed positions. Mutually exclusive with `--closed-only`. |
 | `--closed-only` | — | Fetch only closed positions; skip active positions. Mutually exclusive with `--active-only`. |
+| `--limit` | `20` | Maximum number of positions to fetch from each endpoint. Paginates automatically if the limit exceeds the API's per-request max (50 for closed, 500 for active). |
+| `--late-window` | `24` | Hours before reference time that count as "late" trading. |
+| `--min-directional` | `0.85` | Minimum Directional Consistency threshold to flag. |
+| `--min-dominant` | `0.90` | Minimum Dominant Side Ratio threshold to flag. |
+| `--max-conviction` | `0` | Maximum Price Conviction Score threshold to flag. |
+| `--min-late-volume` | `0.50` | Minimum Late Volume Ratio threshold to flag. |
+| `--export-positions` | — | Export user positions to `positions.xlsx`. With --sniff, exports only closed positions. |
+| `--export-profile` | — | Export user profile information to `profiles.xlsx`. Requires --sniff. |
+| `--export-transactions` | — | Export transaction data to `transactions.xlsx`. Requires --sniff. |
+| `--export-scaffold` | — | Export hourly scaffold to `scaffold.xlsx`. Requires --sniff. |
+| `--export-flagged` | — | Export flagged users with all metrics to `flagged_markets.xlsx`. Requires --sniff. |
+| `--export-all` | — | Export all five xlsx files. Only applicable when using --sniff. |
+
 
 #### Examples
 
 ```bash
 # Basic lookup — prints closed and active positions to terminal
+poly_sniff profile 0xabc1234567890abcdef1234567890abcdef12345
+
+# Insider detection — runs fetched market positions through insider detection metrics
 poly_sniff profile 0xabc1234567890abcdef1234567890abcdef12345
 
 # Fetch up to 200 positions per endpoint
@@ -148,71 +163,6 @@ poly_sniff profile 0xabc1234567890abcdef1234567890abcdef12345 --export
 ```
 
 ---
-
-## Terminal output
-
-### sniff
-
-poly_sniff flags users through a conjunctive filter — all four conditions must be satisfied simultaneously. A user who passes only two or three criteria is not flagged.
-
-The four criteria are:
-
-1. **Directional Consistency** ≥ 0.85
-2. **Dominant Side Ratio** ≥ 0.90
-3. **Price Conviction Score** < 0
-4. **Late Volume Ratio** ≥ 0.50
-
-All thresholds are configurable via CLI flags. Defaults live in config.py.
-
-Each metric is detailed in the **Detection metrics** section below.
-
-Optionally, if `--resolved-outcome` is provided, an additional filter is applied: only users whose dominant side matches the winning outcome are kept (bullish for Yes, bearish for No). When omitted, users are flagged in both directions, which is useful for pre-resolution analysis.
-
-Flagged users are printed as a table in the CLI.
-
-```
-╭─────────────┬─────────────┬────────────┬──────────┬───────────────┬──────────────┬─────────────┬─────────────────────┬────────────────╮
-│ User        │ Wallet      │ Joined     │ X Handle │ Dominant Side │ Realized PnL │ USDC Volume │ Intra-Market Trades │ Markets Traded │
-├─────────────┼─────────────┼────────────┼──────────┼───────────────┼──────────────┼─────────────┼─────────────────────┼────────────────┤
-│ suspectuser │ 0xa3f91...  │ 2025-02-28 │ @suspect │ bullish       │ 3100.00      │ 8420.50     │ 12                  │ 3              │
-│ anonwhale   │ 0x7cb02...  │ 2025-03-01 │          │ bullish       │ 9800.00      │ 15300.00    │ 2                   │ 7              │
-╰─────────────┴─────────────┴────────────┴──────────┴───────────────┴──────────────┴─────────────┴─────────────────────┴────────────────╯
-```
-
-### profile
-
-Two tables are printed — closed positions first, then active. A maximum of 20 rows per table is shown in terminal. If results exceed 20, a message is printed below the table indicating the total count and suggesting `--export` to see all.
-
-**Closed positions columns:** Title, Slug, Outcome, Avg Price, Total Bought, Realized PnL, Current Price
-
-**Active positions columns:** Title, Slug, Size, Avg Price, Total Bought, Current Value, Cash PnL, % PnL, Realized PnL, Current Price
-
-## Exports
-
-### sniff
-
-When any `--export-*` flag is set, xlsx files are placed in a timestamped folder:
-
-```
-polysniff_output/sniff/will-x_20250307_141523/
-├── profiles.xlsx
-├── transactions.xlsx
-├── scaffold.xlsx
-└── flagged_users.xlsx
-```
-
-The `flagged_users.xlsx` includes all metric values for each flagged user, not just the summary columns shown in terminal.
-
-### profile
-
-When `--export` is set, a single xlsx file with two sheets is written:
-
-```
-polysniff_output/profile/0xabc12_20250307_141523/
-└── positions.xlsx   ← sheets: Closed, Active
-```
-
-Each sheet contains every field returned by the API — no column filtering or truncation. All fetched rows are included, not just the 20 shown in terminal.
 
 ## Detection metrics
 
@@ -248,9 +198,81 @@ Threshold for user flagging is configured via `--min-late-volume`.
 
 When `--resolved-outcome` is provided, an additional filter is applied: only users whose dominant side matches the winning outcome are flagged. Someone who bet heavily on the losing side with high confidence isn't an insider — they're just wrong.
 
-## Scaffold export
+---
 
-The `--export-scaffold` option produces an hourly time-series grid (every hour × every user) suitable for Tableau line chart visualization. It includes cumulative position columns (`cumNetPosition`, `cumWeightedPosition`) that show how each user's directional exposure built up over time. An insider's cumulative position will look like a steady ramp in one direction, especially steepening near the end.
+## Terminal output
+
+### sniff
+
+poly_sniff flags users through a conjunctive filter — all four conditions must be satisfied simultaneously. A user who passes only two or three criteria is not flagged.
+
+The four criteria are:
+
+1. **Directional Consistency** ≥ 0.85
+2. **Dominant Side Ratio** ≥ 0.90
+3. **Price Conviction Score** < 0
+4. **Late Volume Ratio** ≥ 0.50
+
+All thresholds are configurable via CLI flags. Defaults live in config.py.
+
+Each metric is detailed in the **Detection metrics** section below.
+
+Optionally, if `--resolved-outcome` is provided, an additional filter is applied: only users whose dominant side matches the winning outcome are kept (bullish for Yes, bearish for No). When omitted, users are flagged in both directions, which is useful for pre-resolution analysis.
+
+Flagged users are printed as a table in the CLI.
+
+```
+╭─────────────┬─────────────┬────────────┬──────────┬───────────────┬──────────────┬─────────────┬─────────────────────┬────────────────╮
+│ User        │ Wallet      │ Joined     │ X Handle │ Dominant Side │ Realized PnL │ USDC Volume │ Intra-Market Trades │ Markets Traded │
+├─────────────┼─────────────┼────────────┼──────────┼───────────────┼──────────────┼─────────────┼─────────────────────┼────────────────┤
+│ suspectuser │ 0xa3f91...  │ 2025-02-28 │ @suspect │ bullish       │ 3100.00      │ 8420.50     │ 12                  │ 3              │
+│ anonwhale   │ 0x7cb02...  │ 2025-03-01 │          │ bullish       │ 9800.00      │ 15300.00    │ 2                   │ 7              │
+╰─────────────┴─────────────┴────────────┴──────────┴───────────────┴──────────────┴─────────────┴─────────────────────┴────────────────╯
+```
+
+### profile
+
+In default mode (i.e. without the --sniff flag set), tables are printed — closed positions first, then active. A maximum of 20 rows per table is shown in terminal. If results exceed 20, a message is printed below the table indicating the total count and suggesting `--export` to see all.
+
+**Closed positions columns:** Title, Slug, Outcome, Avg Price, Total Bought, Realized PnL, Current Price
+
+**Active positions columns:** Title, Slug, Size, Avg Price, Total Bought, Current Value, Cash PnL, % PnL, Realized PnL, Current Price
+
+When the --sniff flag is set, profile will
+
+## Exports
+
+### sniff
+
+When any `--export-*` flag is set, xlsx files are placed in a timestamped folder:
+
+```
+polysniff_output/sniff/will-x_20250307_141523/
+├── profiles.xlsx
+├── transactions.xlsx
+├── scaffold.xlsx
+└── flagged_users.xlsx
+```
+
+The `flagged_users.xlsx` includes all metric values for each flagged user, not just the summary columns shown in terminal.
+
+When provided as a flag to the sniff subcommand, `--export-scaffold` produces an hourly time-series grid (every hour × every user) suitable for Tableau line chart visualization. It includes cumulative position columns (`cumNetPosition`, `cumWeightedPosition`) that show how each user's directional exposure built up over time. An insider's cumulative position will look like a steady ramp in one direction, especially steepening near the end.
+
+### profile
+
+When `--export-*` is set, xlsx files are placed in a timestamped folder:
+
+```
+polysniff_output/profile/0xabc12_20250307_141523/
+└── positions.xlsx   ← sheets: Closed, Active
+├── transactions.xlsx
+├── scaffold.xlsx
+└── flagged_markets.xlsx
+```
+
+Each sheet contains every field returned by the API — no column filtering or truncation. All fetched rows are included, not just the 20 shown in terminal.
+
+When provided as a flag to the profile subcommand, `--export-scaffold` produces an hourly time-series grid (every hour × every market) suitable for Tableau line chart visualization. It includes cumulative position columns (`cumNetPosition`, `cumWeightedPosition`) that show how the user's directional exposure built up within each fetched market over time. An insider's cumulative position will look like a steady ramp in one direction, especially steepening near the end.
 
 ## Requirements
 

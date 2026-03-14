@@ -425,7 +425,7 @@ def main() -> None:
     profile.add_argument(
         '--sniff',
         action='store_true',
-        help='Analyze closed markets for suspicious trading behavior for queried user',
+        help='Analyze closed markets for suspicious trading behavior for the queried user',
     )
     profile_scope = profile.add_mutually_exclusive_group()
     profile_scope.add_argument(
@@ -483,7 +483,7 @@ def main() -> None:
     profile.add_argument(
         '--export-positions',
         action='store_true',
-        help='Export positions to positions.xlsx. With --sniff, exports only closed positions.',
+        help='Export user positions to positions.xlsx. With --sniff, exports only closed positions.',
     )
     profile.add_argument(
         '--export-profile',
